@@ -1,0 +1,11 @@
+body{margin:0;font-family:"Hiragino Sans","Noto Sans CJK JP","Yu Gothic UI",Meiryo,sans-serif;background:#0b0f1a;color:#e6ebf5;background-image:radial-gradient(900px 400px at 85% -10%,rgba(91,76,255,.22),transparent);min-height:100vh}
+.hex{width:26px;height:26px;border-radius:7px;background:conic-gradient(from 200deg,#00e0ff,#7b5cff,#ff4fd8,#00e0ff);display:inline-block;vertical-align:middle;margin-right:8px}
+.lg{max-width:400px;margin:0 auto;padding:40px 18px}.lg h1{font-size:19px;margin:18px 0 4px}.s{color:#8b95b0;font-size:13px}
+input[type=password],input[type=text],select{width:100%;box-sizing:border-box;min-height:48px;background:#121829;color:#e6ebf5;border:1px solid #2a3556;border-radius:10px;padding:8px 12px;font:inherit;font-size:16px;margin:8px 0}
+button,.btn{display:inline-block;min-height:48px;padding:0 20px;border-radius:12px;border:0;background:linear-gradient(90deg,#00b8d4,#7b5cff);color:#fff;font:inherit;font-weight:700;font-size:16px;cursor:pointer;text-decoration:none;line-height:48px}
+button:disabled{opacity:.5}button.sub{background:#1b2238;border:1px solid #2a3556}
+.lg button{width:100%;margin-top:8px}.rm{display:block;color:#8b95b0;font-size:13px;margin:6px 0}.err{color:#ff6b8a;margin-top:10px;font-size:14px}
+.card{background:linear-gradient(180deg,rgba(23,30,50,.95),rgba(16,21,36,.95));border:1px solid #1f2740;border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 10px}.muted{color:#8b95b0;font-size:13px;line-height:1.7}
+table.t{border-collapse:collapse;width:100%;font-size:13px}table.t th,table.t td{border-bottom:1px solid #1f2740;padding:7px 6px;text-align:right}table.t th:first-child,table.t td:first-child{text-align:left}
+.ok{color:#3df5a7}.ng{color:#ff6b8a}.warn{color:#ffb547}

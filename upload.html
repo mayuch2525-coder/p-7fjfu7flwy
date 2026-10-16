@@ -1,0 +1,128 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>月次データ アップロード</title>
+<link rel="stylesheet" href="app/style.css">
+<style>main{max-width:760px;margin:0 auto;padding:16px}header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #1f2740}
+header a{color:#8b95b0;font-size:13px;text-decoration:none;margin-left:10px}.drop{border:2px dashed #2a3556;border-radius:14px;padding:22px;text-align:center;color:#8b95b0}
+.fl{font-size:13px;margin-top:10px;line-height:1.8}.step{color:#00e0ff;font-weight:700;margin-right:6px}#log{font-size:12px;color:#8b95b0;white-space:pre-wrap}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}</style></head><body>
+<header><div><span class="hex"></span><b>CARE<span style="color:#00e0ff">METRICS</span></b> <span class="s">月次アップロード</span></div><div><a href="./">ダッシュボード</a><a href="#" id="lo">ログアウト</a></div></header>
+<main id="root"><div class="s">読み込み中…</div></main>
+<script src="app/crypto.js"></script><script src="app/common.js"></script><script src="app/xlsx.full.min.js"></script>
+<script src="app/parsers.js"></script><script src="app/engine.js"></script><script src="app/mask.js"></script><script src="app/merge.js"></script>
+<script>
+(async()=>{
+const C=SalesCommon, root=document.getElementById('root'); const cfg=await C.loadConfig();
+document.getElementById('lo').onclick=e=>{e.preventDefault();C.logout();localStorage.removeItem('gh_pat');location.reload()};
+const man=v=>(v/10000).toLocaleString('ja-JP',{maximumFractionDigits:1}), yen=v=>Math.round(v).toLocaleString('ja-JP');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let sess=null;
+// ---------- GitHub API ----------
+const GH='https://api.github.com/repos/'+cfg.repo;
+async function gh(p,opt={},raw){ const r=await fetch(p.startsWith('http')?p:GH+p,Object.assign({},opt,{cache:'no-store',headers:Object.assign({'Authorization':'Bearer '+localStorage.getItem('gh_pat'),'Accept':raw?'application/vnd.github.raw+json':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'},opt.body?{'Content-Type':'application/json'}:{})}));
+  if(!r.ok){ const t=await r.text(); const e=new Error('GitHub '+r.status+': '+t.slice(0,200)); e.status=r.status; throw e; } return raw?r.text():r.json(); }
+async function ghFile(path,ref){ try{ return JSON.parse(await gh('/contents/'+path+'?ref='+ref,{},true)); }catch(e){ if(e.status===404) return null; throw e; } }
+async function commitFiles(parent,files,msg){
+  const pc=await gh('/git/commits/'+parent);
+  const tree=[]; for(const [path,content] of Object.entries(files)){ const b=await gh('/git/blobs',{method:'POST',body:JSON.stringify({content,encoding:'utf-8'})}); tree.push({path,mode:'100644',type:'blob',sha:b.sha}); }
+  const t=await gh('/git/trees',{method:'POST',body:JSON.stringify({base_tree:pc.tree.sha,tree})});
+  const c=await gh('/git/commits',{method:'POST',body:JSON.stringify({message:msg,tree:t.sha,parents:[parent]})});
+  await gh('/git/refs/heads/'+cfg.branch,{method:'PATCH',body:JSON.stringify({sha:c.sha,force:false})});
+  return c.sha;
+}
+// ---------- 画面 ----------
+function patForm(msg){
+  root.innerHTML=`<div class="card"><h2>初回設定：GitHub アクセストークン</h2><p class="muted">管理者ごとに作成した「Fine-grained personal access token」（このリポジトリのみ・Contents: Read and write）を貼り付けてください。トークンはこの端末のブラウザ内（localStorage）にだけ保存されます。</p>
+  <input id="pat" type="password" placeholder="github_pat_..." autocomplete="off"><div class="row"><button id="ps">保存して確認</button></div><div id="pe" class="err">${msg||''}</div></div>`;
+  document.getElementById('ps').onclick=async()=>{ const v=document.getElementById('pat').value.trim(); if(!v) return; localStorage.setItem('gh_pat',v);
+    try{ const r=await gh(''); if(!r.permissions||!r.permissions.push) throw new Error('書き込み権限がありません'); main(); }catch(e){ localStorage.removeItem('gh_pat'); document.getElementById('pe').textContent='確認できませんでした: '+e.message; } };
+}
+let FILES=[], WBS=[];
+function main(){
+  if(!localStorage.getItem('gh_pat')) return patForm();
+  root.innerHTML=`<div class="card"><h2><span class="step">1</span>Excelファイルを選択（1か月分）</h2>
+  <p class="muted">対象: ①請求/提出実績・②実施記録・③サービス提供明細・移動支援（①形式／③形式）。同じ月の分をまとめて選択してください（複数選択可）。</p>
+  <label class="drop" id="drop">タップしてファイルを選択<br><small>またはここへドラッグ</small><input id="fi" type="file" multiple accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="display:none"></label>
+  <div class="fl" id="fl"></div></div>
+  <div class="card" id="mcard" style="display:none"><h2><span class="step">2</span>対象の提供月</h2><select id="ym"></select><div class="muted" id="ymn"></div><div class="row" style="margin-top:8px"><button id="agg">集計してプレビュー</button></div></div>
+  <div id="pv"></div><div class="card"><div class="muted">トークン: 設定済み <a href="#" id="rpat" style="color:#8b95b0">変更する</a></div><div id="log"></div></div>`;
+  document.getElementById('rpat').onclick=e=>{e.preventDefault();localStorage.removeItem('gh_pat');patForm()};
+  const fi=document.getElementById('fi'), drop=document.getElementById('drop');
+  drop.ondragover=e=>{e.preventDefault()}; drop.ondrop=e=>{e.preventDefault(); addFiles(e.dataTransfer.files)};
+  fi.onchange=()=>addFiles(fi.files);
+}
+async function addFiles(list){
+  for(const f of list){ if(FILES.some(x=>x.name===f.name&&x.size===f.size)) continue; FILES.push(f); }
+  const fl=document.getElementById('fl'); fl.textContent='読み込み中…';
+  WBS=[]; for(const f of FILES){ try{ WBS.push({name:f.name,wb:XLSX.read(await f.arrayBuffer())}); }catch(e){ WBS.push({name:f.name,wb:null,err:e.message}); } }
+  const rows=WBS.map(w=>{ if(!w.wb) return `<div class="ng">✕ ${esc(w.name)}（読めません: ${esc(w.err)}）</div>`; const c=SalesEngine.classify(w.wb,XLSX,PARSER_CONFIG);
+    return c?`<div class="ok">✓ ${esc(w.name)} → ${esc(c.type.label)}</div>`:`<div class="warn">？ ${esc(w.name)} → 形式不明（無視されます）</div>`; });
+  fl.innerHTML=rows.join('')+`<div style="margin-top:6px"><button class="sub" id="clr" style="min-height:38px;line-height:38px;font-size:13px">選択をクリア</button></div>`;
+  document.getElementById('clr').onclick=()=>{FILES=[];WBS=[];fl.innerHTML='';document.getElementById('mcard').style.display='none';document.getElementById('pv').innerHTML=''};
+  const ok=WBS.filter(w=>w.wb); const det=SalesEngine.detectMonths(ok,PARSER_CONFIG,XLSX);
+  const ms=Object.keys(det).filter(m=>det[m].C>0||det[m].B>0).sort();
+  const best=ms.slice().sort((a,b)=>(det[b].C+det[b].B)-(det[a].C+det[a].B))[0];
+  const sel=document.getElementById('ym'); sel.innerHTML=ms.slice().reverse().map(m=>`<option value="${m}"${m===best?' selected':''}>${m.replace('-','年')}月 提供分（③${det[m].C}行・②${det[m].B}行・①${det[m].A}行）</option>`).join('');
+  document.getElementById('ymn').textContent=ms.length>1?'※ ファイルに複数の月が含まれています。選んだ月の分だけを集計し、他の月は無視します。':'';
+  document.getElementById('mcard').style.display=ms.length?'block':'none';
+  document.getElementById('agg').onclick=()=>preview(sel.value);
+}
+let PEND=null;
+async function preview(ym){
+  const pv=document.getElementById('pv'); pv.innerHTML='<div class="card muted">集計中…（GitHubから最新の状態を取得しています）</div>';
+  try{
+    const ref=await gh('/git/ref/heads/'+cfg.branch); const head=ref.object.sha;
+    const state=await SalesCrypto.decryptJSON(sess.key,await ghFile('data/state.enc.json',head));
+    const manifest=await ghFile('data/manifest.json',head)||{v:1,months:{}};
+    const fy=SalesEngine.fyOf(ym); const same=Object.keys(manifest.months).filter(m=>m!==ym&&SalesEngine.fyOf(m)===fy);
+    const others=[]; for(const m of same){ const e=await ghFile('data/m/'+m+'.enc.json',head); if(e) others.push(await SalesCrypto.decryptJSON(sess.key,e)); }
+    const oldEnc=manifest.months[ym]?await ghFile('data/m/'+ym+'.enc.json',head):null; const old=oldEnc?await SalesCrypto.decryptJSON(sess.key,oldEnc):null;
+    const n2c=same.map(m=>(state.n2c||{})[m]).filter(Boolean);
+    const raw=SalesEngine.aggregateMonth(WBS.filter(w=>w.wb),ym,PARSER_CONFIG,XLSX,{ypuStats:others.filter(r=>!r.est).map(r=>({y:r.ystat,ido:r.ido})),n2cCounts:n2c});
+    if(!raw.files.some(f=>f.type==='meisai'||f.type==='ido_meisai')) throw new Error('③サービス提供明細がありません');
+    if(raw.sales<=0) throw new Error('この月の売上が0円です。ファイルと対象月を確認してください');
+    const st2=JSON.parse(JSON.stringify(state)); const {rec,added}=SalesMask.maskRecord(raw,st2);
+    const names={table:SalesMask.displayNames(st2),pinned:st2.pinned||{}};
+    PEND={ym,head,rec,st2,names,manifest,old,raw};
+    const L=PARSER_CONFIG.labs.filter(l=>rec.labs.includes(l)||(old&&old.labs.includes(l)));
+    const cmp=(a,b)=>old?`<td>${b==null?'—':yen(b)}</td><td class="${Math.abs(a-(b||0))<0.5?'ok':'warn'}">${Math.abs(a-(b||0))<0.5?'同じ':(a-(b||0)>0?'+':'')+yen(a-(b||0))}</td>`:'';
+    const vis=PARSER_CONFIG.labs.reduce((s,l)=>s+(rec.visit_s[l]||0),0), hrs=PARSER_CONFIG.labs.reduce((s,l)=>s+(rec.hour_s[l]||0),0);
+    const ovis=old?PARSER_CONFIG.labs.reduce((s,l)=>s+(old.visit_s[l]||0),0):0, ohrs=old?PARSER_CONFIG.labs.reduce((s,l)=>s+(old.hour_s[l]||0),0):0;
+    const warn=[]; if(rec.est) warn.push('この月は①請求データが無いため、③単位数×同年度の実績単価で<b>推計</b>しています。①が揃ったら同じ月を再アップロードしてください。');
+    if(raw.unknown.length) warn.push('形式不明のため無視したファイル: '+raw.unknown.map(esc).join('、'));
+    if(!raw.files.some(f=>f.type==='jisseki')) warn.push('②実施記録がありません（スタッフ別の売上・時間が出ません）');
+    if(!raw.files.some(f=>f.type==='seikyu'||f.type==='ido_seikyu')) warn.push('①請求データがありません');
+    if(old) warn.push(`${ym} は登録済みです（${esc(old.updated||'')}）。コミットすると<b>置き換え</b>ます。`);
+    pv.innerHTML=`<div class="card"><h2><span class="step">3</span>プレビュー：${ym.replace('-','年')}月 提供分 ${rec.est?'<span class="warn">（推計）</span>':''}</h2>
+     ${warn.map(w=>`<p class="warn" style="font-size:13px">⚠ ${w}</p>`).join('')}
+     <table class="t"><tr><th>項目</th><th>今回(円)</th>${old?'<th>登録済み</th><th>差</th>':''}</tr>
+     <tr><td><b>売上合計</b></td><td><b>${yen(rec.sales)}</b></td>${cmp(rec.sales,old&&old.sales)}</tr>
+     ${L.map(l=>`<tr><td>${l}</td><td>${yen(rec.sales_s[l]||0)}</td>${cmp(rec.sales_s[l]||0,old?(old.sales_s[l]||0):null)}</tr>`).join('')}
+     <tr><td>公費（市町村請求）</td><td>${yen(rec.kouhi)}</td>${cmp(rec.kouhi,old&&old.kouhi)}</tr><tr><td>利用者負担</td><td>${yen(rec.futan)}</td>${cmp(rec.futan,old&&old.futan)}</tr>
+     <tr><td>実利用者数</td><td>${rec.users}人</td>${cmp(rec.users,old&&old.users)}</tr><tr><td>訪問件数</td><td>${vis}件</td>${cmp(vis,old?ovis:null)}</tr>
+     <tr><td>提供時間</td><td>${hrs.toFixed(1)}h</td>${old?`<td>${ohrs.toFixed(1)}</td><td class="${Math.abs(hrs-ohrs)<0.05?'ok':'warn'}">${Math.abs(hrs-ohrs)<0.05?'同じ':(hrs-ohrs).toFixed(1)}</td>`:''}</tr>
+     <tr><td>スタッフ数</td><td>${Object.keys(rec.staff).filter(n=>Object.values(rec.staff[n].h).some(v=>v>0)).length}人</td>${old?'<td></td><td></td>':''}</tr></table>
+     <p class="muted">スタッフ割当：日付一致 ${(rec.alloc.exact/rec.alloc.total*100).toFixed(1)}%・時間比 ${(rec.alloc.fallback/rec.alloc.total*100).toFixed(1)}%・未割当 ${(rec.alloc.unalloc/rec.alloc.total*100).toFixed(1)}%　／　①重複組 ${rec.dup?rec.dup.groups:0}（最新提出月を採用）</p>
+     <p class="muted">読み込んだファイル: ${raw.files.map(f=>esc(f.label)).join('、')}</p>
+     ${added.length?`<p class="muted">新しく登録されるマスク名・ID: ${added.map(esc).join('、')}</p>`:''}
+     <p class="muted">氏名はマスク済みのみ保存。事業所名・市町村コード・保護者名・受給者証番号は保存しません。データは暗号化してコミットされます。</p>
+     <div class="row"><button id="cm">この内容でコミット（${old?'置き換え':'追加'}）</button><button class="sub" id="cn">やめる</button></div><div id="cr"></div></div>`;
+    document.getElementById('cn').onclick=()=>{pv.innerHTML='';PEND=null};
+    document.getElementById('cm').onclick=commit;
+  }catch(e){ console.error(e); pv.innerHTML=`<div class="card err">エラー: ${esc(e.message)}</div>`; if(e.status===401) patForm('トークンが無効です。再設定してください。'); }
+}
+async function commit(){
+  const b=document.getElementById('cm'), cr=document.getElementById('cr'); b.disabled=true; b.textContent='コミット中…';
+  try{ const P=PEND; const m=JSON.parse(JSON.stringify(P.manifest)); m.months[P.ym]={updated:P.rec.updated,est:P.rec.est,source:'upload'};
+    const files={['data/m/'+P.ym+'.enc.json']:JSON.stringify(await SalesCrypto.encryptJSON(sess.key,P.rec)),
+      'data/state.enc.json':JSON.stringify(await SalesCrypto.encryptJSON(sess.key,P.st2)),
+      'data/names.enc.json':JSON.stringify(await SalesCrypto.encryptJSON(sess.key,P.names)),
+      'data/manifest.json':JSON.stringify(m,null,1)};
+    const sha=await commitFiles(P.head,files,(P.old?'replace ':'add ')+P.ym);
+    cr.innerHTML=`<p class="ok">✓ コミットしました（${sha.slice(0,7)}）。1〜2分ほどでダッシュボードに反映されます。</p><a class="btn" href="./?fy=${P.rec.fy}">ダッシュボードを開く</a>`;
+    b.textContent='完了'; window.__lastCommit=sha; PEND=null;
+  }catch(e){ console.error(e); b.disabled=false; b.textContent='コミット';
+    cr.innerHTML=`<p class="err">失敗: ${esc(e.message)}${e.status===422||e.status===409?'<br>他の管理者が同時に更新した可能性があります。もう一度「集計してプレビュー」からやり直してください。':''}</p>`; }
+}
+try{ sess=await C.resume(); }catch(e){}
+if(sess) main(); else C.loginForm(root,cfg,s=>{sess=s;main()},'月次データ アップロード');
+})();
+</script></body></html>

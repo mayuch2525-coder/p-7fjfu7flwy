@@ -1,0 +1,150 @@
+{
+ "v": 1,
+ "months": {
+  "2024-04": {
+   "updated": "2026-10-16T13:21:57.484Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-05": {
+   "updated": "2026-10-16T13:21:57.502Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-06": {
+   "updated": "2026-10-16T13:21:57.513Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-07": {
+   "updated": "2026-10-16T13:21:57.524Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-08": {
+   "updated": "2026-10-16T13:21:57.534Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-09": {
+   "updated": "2026-10-16T13:21:57.545Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-10": {
+   "updated": "2026-10-16T13:21:57.556Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-11": {
+   "updated": "2026-10-16T13:21:57.568Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2024-12": {
+   "updated": "2026-10-16T13:21:57.579Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-01": {
+   "updated": "2026-10-16T13:21:57.589Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-02": {
+   "updated": "2026-10-16T13:21:57.599Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-03": {
+   "updated": "2026-10-16T13:21:57.609Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-04": {
+   "updated": "2026-10-16T13:22:16.760Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-05": {
+   "updated": "2026-10-16T13:22:16.771Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-06": {
+   "updated": "2026-10-16T13:22:16.783Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-07": {
+   "updated": "2026-10-16T13:22:16.794Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-08": {
+   "updated": "2026-10-16T13:22:16.805Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-09": {
+   "updated": "2026-10-16T13:22:16.817Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-10": {
+   "updated": "2026-10-16T13:22:16.830Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-11": {
+   "updated": "2026-10-16T13:22:16.841Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2025-12": {
+   "updated": "2026-10-16T13:22:16.852Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-01": {
+   "updated": "2026-10-16T13:22:16.865Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-02": {
+   "updated": "2026-10-16T13:22:16.878Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-03": {
+   "updated": "2026-10-16T13:22:16.891Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-04": {
+   "updated": "2026-10-16T13:22:21.209Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-05": {
+   "updated": "2026-10-16T13:22:21.215Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-06": {
+   "updated": "2026-10-16T13:22:21.221Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-07": {
+   "updated": "2026-10-16T13:22:21.227Z",
+   "est": false,
+   "source": "migrated"
+  },
+  "2026-08": {
+   "updated": "2026-10-16T13:22:21.234Z",
+   "est": true,
+   "source": "migrated"
+  }
+ }
+}
